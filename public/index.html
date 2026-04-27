@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>The Courtroom</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="page">
+    <header class="masthead">
+      <pre class="ascii-title" aria-label="The Courtroom">
+ _____ _   _ _____    ____ ___  _   _ ____ _____ ____   ___   ___  __  __
+|_   _| | | | ____|  / ___/ _ \| | | |  _ \_   _|  _ \ / _ \ / _ \|  \/  |
+  | | | |_| |  _|   | |  | | | | | | | |_) || | | |_) | | | | | | | |\/| |
+  | | |  _  | |___  | |__| |_| | |_| |  _ < | | |  _ <| |_| | |_| | |  | |
+  |_| |_| |_|_____|  \____\___/ \___/|_| \_\|_| |_| \_\\___/ \___/|_|  |_|
+      </pre>
+      <p class="case-line">In the matter of <strong>Musk v. Altman / OpenAI</strong></p>
+    </header>
+
+    <section id="waitingRoom" class="waiting-room">
+      <pre>
+        ____________________________________
+       |                                    |
+       |          COURT NOT IN SESSION      |
+       |____________________________________|
+
+               THE BENCH IS EMPTY.
+              COUNSEL HAVE NOT ARRIVED.
+      </pre>
+    </section>
+
+    <section class="court">
+      <div class="counsel counsel-left">
+        <div class="counsel-name">GROK</div>
+        <div class="counsel-role">for ELON MUSK</div>
+      </div>
+
+      <div class="transcript-wrap">
+        <div class="transcript-heading">[ TRANSCRIPT ]</div>
+        <div id="transcript" class="transcript" aria-live="polite"></div>
+      </div>
+
+      <div class="counsel counsel-right">
+        <div class="counsel-name">OPENAI</div>
+        <div class="counsel-role">for SAM ALTMAN / OPENAI</div>
+      </div>
+    </section>
+  </main>
+
+  <template id="messageTemplate">
+    <article class="message">
+      <div class="message-meta">
+        <span class="speaker"></span>
+        <time></time>
+      </div>
+      <p></p>
+    </article>
+  </template>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,183 @@
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  padding: 32px 24px;
+  background: #f6f4ee;
+  color: #111;
+  font: 14px/1.55 "Courier New", "Lucida Console", monospace;
+}
+
+a {
+  color: inherit;
+}
+
+pre {
+  margin: 0;
+  white-space: pre;
+  font: inherit;
+}
+
+.page {
+  width: min(1100px, 100%);
+  margin: 0 auto;
+}
+
+.masthead {
+  text-align: center;
+  margin-bottom: 28px;
+}
+
+.ascii-title {
+  display: inline-block;
+  text-align: left;
+  overflow-x: auto;
+  max-width: 100%;
+  letter-spacing: 0;
+}
+
+.case-line {
+  margin: 14px 0 0;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-size: 13px;
+}
+
+.waiting-room {
+  display: flex;
+  justify-content: center;
+  margin: 0 0 28px;
+  padding: 18px 0;
+  border-top: 1px solid #111;
+  border-bottom: 1px solid #111;
+}
+
+.waiting-room[hidden] {
+  display: none;
+}
+
+.court {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr) 220px;
+  gap: 24px;
+  align-items: stretch;
+  border: 1px solid #111;
+}
+
+.counsel {
+  padding: 18px 16px;
+  text-align: center;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.counsel-left {
+  border-right: 1px dashed #111;
+}
+
+.counsel-right {
+  border-left: 1px dashed #111;
+}
+
+.counsel-name {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+}
+
+.counsel-role {
+  margin-top: 6px;
+  font-size: 12px;
+}
+
+.transcript-wrap {
+  display: flex;
+  flex-direction: column;
+  min-height: 480px;
+}
+
+.transcript-heading {
+  padding: 12px 16px;
+  border-bottom: 1px dashed #111;
+  letter-spacing: 0.2em;
+  font-size: 12px;
+}
+
+.transcript {
+  flex: 1;
+  max-height: 60vh;
+  padding: 16px;
+  overflow-y: auto;
+}
+
+.message {
+  margin: 0 0 16px;
+  padding: 0 0 14px;
+  border-bottom: 1px dashed #111;
+}
+
+.message:last-child {
+  border-bottom: none;
+}
+
+.message-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+  font-size: 12px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.speaker {
+  font-weight: 700;
+}
+
+.message p {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.is-typing p::after {
+  content: "_";
+  display: inline-block;
+  margin-left: 2px;
+  animation: blink 0.8s steps(1, end) infinite;
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+@media (max-width: 900px) {
+  .court {
+    grid-template-columns: 1fr;
+  }
+
+  .counsel-left,
+  .counsel-right {
+    border: none;
+    border-bottom: 1px dashed #111;
+  }
+}
+
+@media (max-width: 600px) {
+  body {
+    padding: 18px 12px;
+    font-size: 13px;
+  }
+
+  .ascii-title {
+    font-size: 10px;
+  }
+}
