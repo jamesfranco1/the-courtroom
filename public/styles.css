@@ -30,37 +30,6 @@ pre {
   margin: 0 auto;
 }
 
-.page-mark {
-  position: fixed;
-  top: 24px;
-  left: 24px;
-  width: 140px;
-  height: 140px;
-  image-rendering: auto;
-  -webkit-image-rendering: auto;
-  pointer-events: none;
-  user-select: none;
-  z-index: 10;
-}
-
-@media (max-width: 900px) {
-  .page-mark {
-    width: 96px;
-    height: 96px;
-    top: 16px;
-    left: 16px;
-  }
-}
-
-@media (max-width: 600px) {
-  .page-mark {
-    width: 72px;
-    height: 72px;
-    top: 12px;
-    left: 12px;
-  }
-}
-
 .masthead {
   text-align: center;
   margin-bottom: 28px;
