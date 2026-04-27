@@ -6,7 +6,10 @@ const template = document.getElementById('messageTemplate');
 const winsGrokEl = document.getElementById('winsGrok');
 const winsOpenaiEl = document.getElementById('winsOpenai');
 
-const activeMessages = new Map();
+const messageRecords = new Map();
+const pendingOrder = [];
+let currentRecord = null;
+let pumpInterval = null;
 
 function speakerLabel(speaker) {
   if (speaker === 'grok') return 'COUNSEL FOR MUSK';
@@ -20,10 +23,13 @@ function setSessionVisible(isInSession) {
 }
 
 function clearTranscript() {
-  for (const record of activeMessages.values()) {
-    if (record.intervalId) clearInterval(record.intervalId);
+  if (pumpInterval) {
+    clearInterval(pumpInterval);
+    pumpInterval = null;
   }
-  activeMessages.clear();
+  messageRecords.clear();
+  pendingOrder.length = 0;
+  currentRecord = null;
   transcriptEl.innerHTML = '';
 }
 
@@ -33,13 +39,33 @@ function renderScoreboard(wins) {
   if (winsOpenaiEl) winsOpenaiEl.textContent = String(wins.openai ?? 0);
 }
 
-function createMessageRecord({ id, speaker, text = '', createdAt }) {
-  const node = template.content.firstElementChild.cloneNode(true);
-  const time = createdAt ? new Date(createdAt) : new Date();
+function ensureRecord(id, speaker) {
+  let record = messageRecords.get(id);
+  if (record) return record;
 
-  node.dataset.id = id;
-  node.classList.add(`message-${speaker}`);
-  node.querySelector('.speaker').textContent = speakerLabel(speaker);
+  record = {
+    id,
+    speaker,
+    queue: [],
+    finalized: false,
+    finalText: '',
+    node: null,
+    pEl: null,
+    started: false,
+    createdAt: Date.now()
+  };
+  messageRecords.set(id, record);
+  pendingOrder.push(id);
+  return record;
+}
+
+function mountMessageNode(record) {
+  const node = template.content.firstElementChild.cloneNode(true);
+  const time = new Date(record.createdAt);
+
+  node.dataset.id = record.id;
+  node.classList.add(`message-${record.speaker}`, 'is-typing');
+  node.querySelector('.speaker').textContent = speakerLabel(record.speaker);
   node.querySelector('time').textContent = time.toLocaleTimeString([], {
     hour: '2-digit',
     minute: '2-digit',
@@ -47,81 +73,90 @@ function createMessageRecord({ id, speaker, text = '', createdAt }) {
   });
 
   const pEl = node.querySelector('p');
-  pEl.textContent = text;
+  pEl.textContent = '';
   transcriptEl.appendChild(node);
   transcriptEl.scrollTop = transcriptEl.scrollHeight;
 
-  const record = {
-    node,
-    pEl,
-    queue: [],
-    typing: false,
-    finalized: false,
-    finalText: text,
-    intervalId: null
-  };
-  activeMessages.set(id, record);
-  return record;
+  record.node = node;
+  record.pEl = pEl;
 }
 
 function createSettledMessage(entry) {
-  const record = createMessageRecord({
-    id: entry.id,
-    speaker: entry.speaker,
-    text: entry.text,
-    createdAt: entry.createdAt
+  const node = template.content.firstElementChild.cloneNode(true);
+  const time = entry.createdAt ? new Date(entry.createdAt) : new Date();
+
+  node.dataset.id = entry.id;
+  node.classList.add(`message-${entry.speaker}`);
+  node.querySelector('.speaker').textContent = speakerLabel(entry.speaker);
+  node.querySelector('time').textContent = time.toLocaleTimeString([], {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
   });
-  record.finalized = true;
-  record.finalText = entry.text;
-  return record;
+  node.querySelector('p').textContent = entry.text;
+  transcriptEl.appendChild(node);
+  transcriptEl.scrollTop = transcriptEl.scrollHeight;
 }
 
-function startTyping(record) {
-  if (record.typing) return;
-  record.typing = true;
-  record.intervalId = setInterval(() => {
-    if (record.queue.length === 0) {
-      if (record.finalized) {
-        clearInterval(record.intervalId);
-        record.intervalId = null;
-        record.typing = false;
-        record.node.classList.remove('is-typing');
-      }
+function ensurePump() {
+  if (pumpInterval) return;
+  pumpInterval = setInterval(pump, TYPE_INTERVAL_MS);
+}
+
+function pump() {
+  if (!currentRecord) {
+    while (pendingOrder.length && !messageRecords.has(pendingOrder[0])) {
+      pendingOrder.shift();
+    }
+    if (!pendingOrder.length) {
+      clearInterval(pumpInterval);
+      pumpInterval = null;
       return;
     }
-    const ch = record.queue.shift();
-    record.pEl.textContent += ch;
-    transcriptEl.scrollTop = transcriptEl.scrollHeight;
-  }, TYPE_INTERVAL_MS);
-}
-
-function appendToken({ id, speaker, token }) {
-  let record = activeMessages.get(id);
-  if (!record) {
-    record = createMessageRecord({ id, speaker });
-    record.node.classList.add('is-typing');
+    currentRecord = messageRecords.get(pendingOrder.shift());
   }
-  for (const ch of token) record.queue.push(ch);
-  startTyping(record);
-}
 
-function finalizeMessage(entry) {
-  const record = activeMessages.get(entry.id);
-  if (!record) {
-    createSettledMessage(entry);
+  const r = currentRecord;
+  if (!r.started) {
+    mountMessageNode(r);
+    r.started = true;
+  }
+
+  if (r.queue.length > 0) {
+    r.pEl.textContent += r.queue.shift();
+    transcriptEl.scrollTop = transcriptEl.scrollHeight;
     return;
   }
 
+  if (r.finalized) {
+    r.node.classList.remove('is-typing');
+    currentRecord = null;
+  }
+}
+
+function handleTurnStart({ id, speaker }) {
+  ensureRecord(id, speaker);
+  ensurePump();
+}
+
+function handleToken({ id, speaker, token }) {
+  const record = ensureRecord(id, speaker);
+  for (const ch of token) record.queue.push(ch);
+  ensurePump();
+}
+
+function handleTurnEnd(entry) {
+  const record = ensureRecord(entry.id, entry.speaker);
   record.finalText = entry.text;
   record.finalized = true;
 
-  const visibleLen = record.pEl.textContent.length + record.queue.length;
+  const visibleLen = (record.pEl ? record.pEl.textContent.length : 0) + record.queue.length;
   if (visibleLen < entry.text.length) {
     const tail = entry.text.slice(visibleLen);
     for (const ch of tail) record.queue.push(ch);
   }
 
-  startTyping(record);
+  ensurePump();
 }
 
 function applyState(state) {
@@ -141,18 +176,16 @@ function connect() {
   });
 
   events.addEventListener('turn-start', (event) => {
-    const data = JSON.parse(event.data);
     setSessionVisible(true);
-    const record = createMessageRecord({ id: data.id, speaker: data.speaker, text: '' });
-    record.node.classList.add('is-typing');
+    handleTurnStart(JSON.parse(event.data));
   });
 
   events.addEventListener('token', (event) => {
-    appendToken(JSON.parse(event.data));
+    handleToken(JSON.parse(event.data));
   });
 
   events.addEventListener('turn-end', (event) => {
-    finalizeMessage(JSON.parse(event.data));
+    handleTurnEnd(JSON.parse(event.data));
   });
 }
 
