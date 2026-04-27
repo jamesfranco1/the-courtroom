@@ -36,7 +36,8 @@ pre {
   left: 24px;
   width: 140px;
   height: 140px;
-  image-rendering: crisp-edges;
+  image-rendering: auto;
+  -webkit-image-rendering: auto;
   pointer-events: none;
   user-select: none;
   z-index: 10;
