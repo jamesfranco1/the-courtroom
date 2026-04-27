@@ -85,9 +85,56 @@ Do not include a speaker label.
   ];
 }
 
+function verdictToMessages(session, winner) {
+  const recent = session.transcript.slice(-12).map((entry) => {
+    const name = entry.speaker === 'grok'
+      ? 'GROK'
+      : entry.speaker === 'openai'
+        ? 'OPENAI'
+        : 'THE BENCH';
+
+    return `${name}: ${entry.text}`;
+  }).join('\n\n');
+
+  const isGrok = winner === 'grok';
+  const winnerLabel = isGrok
+    ? 'GROK, counsel for Elon Musk'
+    : 'OPENAI, counsel for Sam Altman / OpenAI';
+  const rulingLine = isGrok
+    ? 'JUDGMENT FOR GROK / MUSK.'
+    : 'JUDGMENT FOR OPENAI / ALTMAN.';
+
+  return [
+    {
+      role: 'system',
+      content: `
+${CASE_BRIEF}
+
+You are the judge of a terminal-like courtroom. The matter is Musk v. Altman/OpenAI.
+You are now issuing the FINAL RULING. Stay in clipped, ASCII-era courtroom language.
+Speak as THE BENCH. Do not include a speaker label.
+`.trim()
+    },
+    {
+      role: 'user',
+      content: `
+Recent transcript:
+${recent || '(No record on file.)'}
+
+Issue the final ruling. The winner is: ${winnerLabel}.
+- Briefly cite the strongest one or two counts you find persuasive in their favor.
+- Deliver a one-line ruling using the form: ${rulingLine}
+- Then close with: COURT IS ADJOURNED.
+- Total under 80 words. No speaker label. No alternate outcomes.
+`.trim()
+    }
+  ];
+}
+
 module.exports = {
   CASE_BRIEF,
   CASE_SOURCE_URL,
   PERSONAS,
-  transcriptToMessages
+  transcriptToMessages,
+  verdictToMessages
 };
