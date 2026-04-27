@@ -24,12 +24,75 @@ const clients = new Set();
 const statsDirRaw = process.env.STATS_DIR || 'data';
 const statsDir = path.isAbsolute(statsDirRaw) ? statsDirRaw : path.join(__dirname, statsDirRaw);
 const statsFile = path.join(statsDir, 'stats.json');
+const hearingsDir = path.join(statsDir, 'hearings');
 
 const openai = process.env.OPENAI_API_KEY
   ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
   : null;
 
 let wins = { grok: 0, openai: 0 };
+let archiveIndex = [];
+const ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function loadArchive() {
+  try {
+    fs.mkdirSync(hearingsDir, { recursive: true });
+    const files = fs.readdirSync(hearingsDir).filter((f) => f.endsWith('.json'));
+    const items = [];
+    for (const file of files) {
+      try {
+        const raw = fs.readFileSync(path.join(hearingsDir, file), 'utf8');
+        const h = JSON.parse(raw);
+        if (h && h.id && h.winner && h.endedAt) {
+          items.push({
+            id: h.id,
+            startedAt: h.startedAt || h.endedAt,
+            endedAt: h.endedAt,
+            winner: h.winner,
+            verdictAt: h.verdictAt || 0,
+            turns: h.turns || (Array.isArray(h.transcript) ? h.transcript.length : 0)
+          });
+        }
+      } catch (_) {
+        // skip malformed file
+      }
+    }
+    items.sort((a, b) => b.endedAt - a.endedAt);
+    archiveIndex = items;
+  } catch (_) {
+    archiveIndex = [];
+  }
+}
+
+function archiveHearing(winner) {
+  try {
+    fs.mkdirSync(hearingsDir, { recursive: true });
+    const hearing = {
+      id: court.id,
+      startedAt: court.startedAt || court.transcript[0]?.createdAt || now(),
+      endedAt: now(),
+      winner,
+      verdictAt: court.verdictAt,
+      turns: court.turn,
+      model,
+      transcript: court.transcript
+    };
+    const file = path.join(hearingsDir, `${hearing.id}.json`);
+    const tmp = `${file}.tmp`;
+    fs.writeFileSync(tmp, JSON.stringify(hearing));
+    fs.renameSync(tmp, file);
+    archiveIndex.unshift({
+      id: hearing.id,
+      startedAt: hearing.startedAt,
+      endedAt: hearing.endedAt,
+      winner: hearing.winner,
+      verdictAt: hearing.verdictAt,
+      turns: hearing.turns
+    });
+  } catch (_) {
+    // ignore — archive is best-effort persistence
+  }
+}
 
 function loadStats() {
   try {
@@ -60,6 +123,7 @@ function saveStats() {
 }
 
 loadStats();
+loadArchive();
 
 function pickVerdictAt() {
   const lo = Math.floor(minDebateTurns);
@@ -73,6 +137,7 @@ const court = {
   turn: 0,
   verdictAt: pickVerdictAt(),
   running: false,
+  startedAt: 0,
   transcript: []
 };
 
@@ -120,6 +185,7 @@ function resetCourt(status = 'waiting') {
   court.turn = 0;
   court.verdictAt = pickVerdictAt();
   court.running = false;
+  court.startedAt = 0;
   court.transcript = [];
   broadcast('state', snapshot());
 }
@@ -129,6 +195,7 @@ function openCourt() {
   court.status = 'live';
   court.turn = 0;
   court.verdictAt = pickVerdictAt();
+  court.startedAt = now();
   court.transcript = [
     entry(
       'judge',
@@ -235,6 +302,7 @@ async function runCourt() {
       await streamVerdict(winner);
       wins[winner] += 1;
       saveStats();
+      archiveHearing(winner);
       court.status = 'adjourned';
       broadcast('state', snapshot());
       console.log(`[court] verdict: ${winner}; wins=grok:${wins.grok}/openai:${wins.openai}`);
@@ -277,6 +345,28 @@ function pauseCourt() {
 
 app.get('/api/courtroom/state', (req, res) => {
   res.json(snapshot());
+});
+
+app.get('/api/hearings', (req, res) => {
+  res.json({ hearings: archiveIndex });
+});
+
+app.get('/api/hearings/:id', (req, res) => {
+  const id = String(req.params.id || '');
+  if (!ID_RE.test(id)) {
+    return res.status(400).json({ error: 'invalid id' });
+  }
+
+  const file = path.join(hearingsDir, `${id}.json`);
+  if (!fs.existsSync(file)) {
+    return res.status(404).json({ error: 'not found' });
+  }
+
+  try {
+    res.type('application/json').send(fs.readFileSync(file, 'utf8'));
+  } catch (_) {
+    res.status(500).json({ error: 'read failed' });
+  }
 });
 
 const adminToken = process.env.ADMIN_TOKEN || '';

@@ -19,6 +19,11 @@
   |_| |_| |_|_____|  \____\___/ \___/|_| \_\|_| |_| \_\\___/ \___/|_|  |_|
       </pre>
       <p class="case-line">In the matter of <strong>Musk v. Altman / OpenAI</strong></p>
+      <nav class="court-nav" aria-label="Court navigation">
+        <button type="button" class="court-nav-btn" id="navLive" data-view="live">[ LIVE ]</button>
+        <span class="court-nav-sep">|</span>
+        <button type="button" class="court-nav-btn" id="navArchive" data-view="archive">[ ARCHIVE ]</button>
+      </nav>
     </header>
 
     <section class="scoreboard" aria-label="Verdict tally">
@@ -39,7 +44,7 @@
       </pre>
     </section>
 
-    <section class="court">
+    <section class="court" id="liveView">
       <div class="counsel counsel-left">
         <div class="counsel-name">GROK</div>
         <div class="counsel-role">for ELON MUSK</div>
@@ -53,6 +58,16 @@
       <div class="counsel counsel-right">
         <div class="counsel-name">OPENAI</div>
         <div class="counsel-role">for SAM ALTMAN / OPENAI</div>
+      </div>
+    </section>
+
+    <section class="archive" id="archiveView" hidden>
+      <div class="archive-heading">[ ARCHIVE OF HEARINGS ]</div>
+      <div id="archiveList" class="archive-list" aria-live="polite"></div>
+      <div id="archiveDetail" class="archive-detail" hidden>
+        <button type="button" class="archive-back" id="archiveBack">&lt; BACK TO LIST</button>
+        <div id="archiveDetailMeta" class="archive-detail-meta"></div>
+        <div id="archiveDetailTranscript" class="transcript archive-transcript"></div>
       </div>
     </section>
   </main>

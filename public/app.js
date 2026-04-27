@@ -6,10 +6,22 @@ const template = document.getElementById('messageTemplate');
 const winsGrokEl = document.getElementById('winsGrok');
 const winsOpenaiEl = document.getElementById('winsOpenai');
 
+const liveView = document.getElementById('liveView');
+const archiveView = document.getElementById('archiveView');
+const archiveListEl = document.getElementById('archiveList');
+const archiveDetailEl = document.getElementById('archiveDetail');
+const archiveDetailMeta = document.getElementById('archiveDetailMeta');
+const archiveDetailTranscript = document.getElementById('archiveDetailTranscript');
+const archiveBackBtn = document.getElementById('archiveBack');
+const navLiveBtn = document.getElementById('navLive');
+const navArchiveBtn = document.getElementById('navArchive');
+
 const messageRecords = new Map();
 const pendingOrder = [];
 let currentRecord = null;
 let pumpInterval = null;
+let sessionActive = false;
+let currentView = 'live';
 
 function speakerLabel(speaker) {
   if (speaker === 'grok') return 'COUNSEL FOR MUSK';
@@ -19,7 +31,10 @@ function speakerLabel(speaker) {
 }
 
 function setSessionVisible(isInSession) {
-  waitingRoom.hidden = isInSession;
+  sessionActive = isInSession;
+  if (currentView === 'live') {
+    waitingRoom.hidden = isInSession;
+  }
 }
 
 function clearTranscript() {
@@ -188,6 +203,133 @@ function connect() {
     handleTurnEnd(JSON.parse(event.data));
   });
 }
+
+function formatTime(ts) {
+  if (!ts) return '';
+  const d = new Date(ts);
+  return d.toLocaleString([], {
+    year: 'numeric',
+    month: 'short',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+}
+
+function winnerLabel(winner) {
+  if (winner === 'grok') return 'MUSK / GROK';
+  if (winner === 'openai') return 'ALTMAN / OPENAI';
+  return 'UNDETERMINED';
+}
+
+function showLiveView() {
+  currentView = 'live';
+  archiveView.hidden = true;
+  liveView.hidden = false;
+  waitingRoom.hidden = sessionActive;
+  navLiveBtn.classList.add('is-active');
+  navArchiveBtn.classList.remove('is-active');
+}
+
+function showArchiveView() {
+  currentView = 'archive';
+  liveView.hidden = true;
+  waitingRoom.hidden = true;
+  archiveView.hidden = false;
+  archiveDetailEl.hidden = true;
+  archiveListEl.hidden = false;
+  navArchiveBtn.classList.add('is-active');
+  navLiveBtn.classList.remove('is-active');
+  loadArchiveList();
+}
+
+function renderArchiveList(hearings) {
+  archiveListEl.innerHTML = '';
+  if (!hearings || !hearings.length) {
+    const empty = document.createElement('div');
+    empty.className = 'archive-empty';
+    empty.textContent = 'NO HEARINGS ON FILE.';
+    archiveListEl.appendChild(empty);
+    return;
+  }
+
+  for (const h of hearings) {
+    const row = document.createElement('button');
+    row.type = 'button';
+    row.className = 'archive-row';
+    row.dataset.id = h.id;
+
+    const date = document.createElement('span');
+    date.className = 'date';
+    date.textContent = formatTime(h.endedAt);
+
+    const winner = document.createElement('span');
+    winner.className = `winner ${h.winner === 'grok' ? 'grok' : 'openai'}`;
+    winner.textContent = `WINNER: ${winnerLabel(h.winner)}`;
+
+    const turns = document.createElement('span');
+    turns.className = 'turns';
+    turns.textContent = `${h.turns || 0} TURNS`;
+
+    row.append(date, winner, turns);
+    row.addEventListener('click', () => loadHearingDetail(h.id));
+    archiveListEl.appendChild(row);
+  }
+}
+
+async function loadArchiveList() {
+  archiveListEl.innerHTML = '<div class="archive-empty">LOADING...</div>';
+  const res = await fetch('/api/hearings');
+  if (!res.ok) {
+    archiveListEl.innerHTML = '<div class="archive-empty">ARCHIVE UNAVAILABLE.</div>';
+    return;
+  }
+  const data = await res.json();
+  renderArchiveList(data.hearings || []);
+}
+
+function renderArchiveTranscript(container, transcript) {
+  container.innerHTML = '';
+  for (const entry of transcript) {
+    const node = template.content.firstElementChild.cloneNode(true);
+    const time = entry.createdAt ? new Date(entry.createdAt) : new Date();
+    node.classList.add(`message-${entry.speaker}`);
+    node.querySelector('.speaker').textContent = speakerLabel(entry.speaker);
+    node.querySelector('time').textContent = time.toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
+    node.querySelector('p').textContent = entry.text;
+    container.appendChild(node);
+  }
+}
+
+async function loadHearingDetail(id) {
+  archiveDetailEl.hidden = false;
+  archiveListEl.hidden = true;
+  archiveDetailMeta.textContent = 'LOADING...';
+  archiveDetailTranscript.innerHTML = '';
+
+  const res = await fetch(`/api/hearings/${encodeURIComponent(id)}`);
+  if (!res.ok) {
+    archiveDetailMeta.textContent = 'HEARING NOT FOUND.';
+    return;
+  }
+  const h = await res.json();
+  archiveDetailMeta.textContent =
+    `${formatTime(h.startedAt)} -> ${formatTime(h.endedAt)} | WINNER: ${winnerLabel(h.winner)} | ${h.turns || 0} TURNS`;
+  renderArchiveTranscript(archiveDetailTranscript, h.transcript || []);
+}
+
+navLiveBtn.addEventListener('click', showLiveView);
+navArchiveBtn.addEventListener('click', showArchiveView);
+archiveBackBtn.addEventListener('click', () => {
+  archiveDetailEl.hidden = true;
+  archiveListEl.hidden = false;
+});
+
+navLiveBtn.classList.add('is-active');
 
 setSessionVisible(false);
 clearTranscript();

@@ -50,6 +50,46 @@ pre {
   font-size: 13px;
 }
 
+.court-nav {
+  margin: 12px 0 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+.court-nav-btn {
+  appearance: none;
+  background: transparent;
+  border: none;
+  padding: 4px 6px;
+  font: inherit;
+  letter-spacing: inherit;
+  color: inherit;
+  cursor: pointer;
+  text-transform: inherit;
+  opacity: 0.55;
+}
+
+.court-nav-btn:hover,
+.court-nav-btn:focus-visible {
+  opacity: 1;
+  outline: none;
+}
+
+.court-nav-btn.is-active {
+  opacity: 1;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.court-nav-sep {
+  opacity: 0.4;
+}
+
 .scoreboard {
   display: flex;
   justify-content: center;
@@ -184,6 +224,130 @@ pre {
   50% {
     opacity: 0;
   }
+}
+
+.archive {
+  border: 1px solid #111;
+}
+
+.archive[hidden] {
+  display: none;
+}
+
+.archive-heading {
+  padding: 12px 16px;
+  border-bottom: 1px dashed #111;
+  letter-spacing: 0.2em;
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.archive-list {
+  padding: 8px 0;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.archive-list[hidden] {
+  display: none;
+}
+
+.archive-empty {
+  padding: 18px 16px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+.archive-row {
+  display: grid;
+  grid-template-columns: minmax(140px, 1fr) minmax(120px, 1fr) auto;
+  gap: 16px;
+  align-items: baseline;
+  width: 100%;
+  text-align: left;
+  padding: 12px 16px;
+  border: none;
+  border-bottom: 1px dashed #111;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.archive-row:hover,
+.archive-row:focus-visible {
+  background: rgba(0, 0, 0, 0.04);
+  outline: none;
+}
+
+.archive-row:last-of-type {
+  border-bottom: none;
+}
+
+.archive-row .winner {
+  font-weight: 700;
+}
+
+.archive-row .winner.grok {
+  color: #111;
+}
+
+.archive-row .winner.openai {
+  color: #111;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.archive-row .turns {
+  opacity: 0.6;
+  font-size: 12px;
+}
+
+.archive-detail {
+  padding: 16px;
+}
+
+.archive-detail[hidden] {
+  display: none;
+}
+
+.archive-back {
+  appearance: none;
+  background: transparent;
+  border: none;
+  padding: 0 0 12px;
+  font: inherit;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  font-size: 12px;
+  color: inherit;
+  cursor: pointer;
+  opacity: 0.7;
+}
+
+.archive-back:hover,
+.archive-back:focus-visible {
+  opacity: 1;
+  outline: none;
+}
+
+.archive-detail-meta {
+  padding: 0 0 12px;
+  border-bottom: 1px dashed #111;
+  margin-bottom: 12px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-size: 12px;
+}
+
+.archive-transcript {
+  max-height: 60vh;
+  overflow-y: auto;
+  padding: 0;
 }
 
 @media (max-width: 900px) {
